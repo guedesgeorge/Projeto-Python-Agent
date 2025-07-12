@@ -1,79 +1,61 @@
-# Projeto: Consulta OAB com Agente LLM
+# Projeto OAB Scraper e LLM Agent
 
-Este projeto foi desenvolvido para consultar dados de advogados registrados no site oficial da OAB (Cadastro Nacional dos Advogados - CNA) e responder a perguntas em linguagem natural sobre esses dados utilizando um agente de IA com modelo hospedado na Cloudflare Workers AI.
+Este projeto implementa uma solução para consultar dados de advogados no site oficial da OAB (CNA – Cadastro Nacional dos Advogados) e permite que um agente de IA responda perguntas sobre esses dados.
 
-Objetivos
+## Objetivo
 
-Automatizar a consulta ao site da OAB;
+O objetivo principal é demonstrar a capacidade de construir serviços Python para web scraping, expor esses serviços via uma API, e integrar um modelo de linguagem (LLM) para processamento de linguagem natural.
 
-Expor os dados por meio de uma API REST com FastAPI;
+## Componentes
 
-Utilizar OCR para extrair dados presentes em imagens (quando aplicável);
+1.  **Web Scraper (`scraper/`)**: Consulta o site `https://cna.oab.org.br/` para buscar dados de advogados por nome e UF, extraindo informações como número de inscrição, nome completo, UF, categoria, data de inscrição e situação atual.
+2.  **API (`api/`)**: Um servidor FastAPI que expõe o scraper através de um endpoint `POST /fetch_oab`.
+3.  **Agente LLM (`agent/`)**: Um agente Python que recebe perguntas em linguagem natural, utiliza a API do scraper como ferramenta e gera respostas claras com base nos dados obtidos, utilizando a Cloudflare Workers AI (ou outro LLM configurado).
 
-Utilizar um agente LLM (LangChain + Cloudflare Workers AI) para responder perguntas em linguagem natural com base nos dados retornados.
+## Requisitos
 
-# Funcionalidades
+* Docker e Docker Compose (para execução local)
+* Conta na Cloudflare e token de API para Cloudflare Workers AI (se estiver usando o modelo `@cf/meta/llama-3-8b-instruct` ou similar).
 
-Consulta de advogado por nome;
+## Configuração do Ambiente
 
-Extração de:
+1.  **Clone o repositório:**
+    ```bash
+    git clone <URL_DO_SEU_REPOSITORIO>
+    cd <nome_do_seu_repositorio>
+    ```
 
-Número da inscrição
+2.  **Variáveis de Ambiente:**
+    Crie um arquivo `.env` na raiz do projeto (baseado no `.env.example`) e preencha com suas credenciais da Cloudflare:
+    ```
+    CF_API_TOKEN="seu_token_da_cloudflare"
+    CF_ACCOUNT_ID="seu_account_id_da_cloudflare"
+    ```
+    *Você pode encontrar seu `CF_ACCOUNT_ID` no painel da Cloudflare.*
 
-Nome completo
+## Instalação e Execução Local (com Docker)
 
-UF da seccional
+1.  **Construa as imagens Docker:**
+    ```bash
+    docker-compose build
+    ```
 
-# Categoria
+2.  **Inicie os serviços:**
+    ```bash
+    docker-compose up
+    ```
+    Isso iniciará a API FastAPI (geralmente em `http://localhost:8000`) e o ambiente para o agente.
 
-Data de inscrição (via OCR)
+## Exemplos de Uso
 
-Situação atual (via OCR)
+### 1. Via `curl` (chamando a API FastAPI)
 
-API REST com FastAPI
+Com a API rodando (via `docker-compose up`), você pode testá-la usando `curl`:
 
-Integração com modelo LLM para respostas automatizadas.
-
-# Erros encontrados e resolvidos
-
-1. Erro de extração de dados detalhados
-
-Problema: O campo DetailUrl retornado pelo JSON não vinha com o formato esperado, gerando IndexError ao fazer split("RenderDetail").
-Solução: A URL completa já vinha no campo DetailUrl, então foi usada diretamente.
-
-# 2. Extração de dados ocultos em imagens
-
-Problema: Os campos data_inscricao e situação são exibidos como imagem no site da OAB.
-Solução: Integrado o pytesseract para OCR. Adicionalmente, foi necessário instalar:
-
-Tesseract OCR
-
-Poppler (para extrair texto de PDF, se aplicável)
-
-Pillow, pdf2image
-
-# 3. Erro: pdfinfo_from_path - Poppler não instalado
-
-Solução: Instalado Poppler e adicionado ao PATH do sistema.
-
- # 4. Erro na importação de CloudflareWorkersAI
-
-Solução: Corrigido o import:
-
-from langchain_community.llms import CloudflareWorkersAI
-
-# 5. Token/API da Cloudflare com rota incorreta
-
-Solução: Utilizado endpoint correto:
-
-https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/ai/run/@cf/meta/llama-3-8b-instruct
-
-# Como executar localmente
-
-Requisitos:
-
-Python 3.10+
-
-Tesseract OCR instalado
-
-Poppler instalado e no PATH
+```bash
+curl -X POST "http://localhost:8000/fetch_oab" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "name": "ANTONIO AUGUSTO GENELHU JÚNIOR",
+           "uf": ""
+         }'
